@@ -30,10 +30,19 @@ analysisClass::analysisClass(string * inputList, string * cutFile, string * tree
     std::string L1Path = "data/Summer15_25nsV7_MC/Summer15_25nsV7_MC_L1FastJet_AK4PFchs.txt";
     std::string L2Path = "data/Summer15_25nsV7_MC/Summer15_25nsV7_MC_L2Relative_AK4PFchs.txt";
     std::string L3Path = "data/Summer15_25nsV7_MC/Summer15_25nsV7_MC_L3Absolute_AK4PFchs.txt";
-    std::string L1DATAPath = "data/74X_HLT_mcRun2_asymptotic_fromSpring15DR_v0_MC/74X_HLT_mcRun2_asymptotic_fromSpring15DR_v0_L1FastJet_AK4CaloHLT.txt";
-    std::string L2DATAPath = "data/74X_HLT_mcRun2_asymptotic_fromSpring15DR_v0_MC/74X_HLT_mcRun2_asymptotic_fromSpring15DR_v0_L2Relative_AK4CaloHLT.txt"; 
-    std::string L3DATAPath = "data/74X_HLT_mcRun2_asymptotic_fromSpring15DR_v0_MC/74X_HLT_mcRun2_asymptotic_fromSpring15DR_v0_L3Absolute_AK4CaloHLT.txt";
-    std::string L2L3ResidualPath = "data/Summer15_25nsV7_DATA/Summer15_25nsV7_DATA_L2L3Residual_AK4PF.txt" ;
+    // procedure for 2015 CaloScouting data:
+    //std::string L1DATAPath = "data/74X_HLT_mcRun2_asymptotic_fromSpring15DR_v0_MC/74X_HLT_mcRun2_asymptotic_fromSpring15DR_v0_L1FastJet_AK4CaloHLT.txt";
+    //std::string L2DATAPath = "data/74X_HLT_mcRun2_asymptotic_fromSpring15DR_v0_MC/74X_HLT_mcRun2_asymptotic_fromSpring15DR_v0_L2Relative_AK4CaloHLT.txt"; 
+    //std::string L3DATAPath = "data/74X_HLT_mcRun2_asymptotic_fromSpring15DR_v0_MC/74X_HLT_mcRun2_asymptotic_fromSpring15DR_v0_L3Absolute_AK4CaloHLT.txt";
+    //std::string L2L3ResidualPath = "data/Summer15_25nsV7_DATA/Summer15_25nsV7_DATA_L2L3Residual_AK4PF.txt" ;
+    // procedure for 2016 CaloScouting data:
+    std::string L1DATAPath = "data/80X_dataRun2_HLT_frozen_v12/80X_dataRun2_HLT_frozen_v12_L1FastJet_AK4CaloHLT.txt";
+    std::string L2DATAPath = "data/80X_dataRun2_HLT_frozen_v12/80X_dataRun2_HLT_frozen_v12_L2Relative_AK4CaloHLT.txt";
+    std::string L3DATAPath = "data/80X_dataRun2_HLT_frozen_v12/80X_dataRun2_HLT_frozen_v12_L3Absolute_AK4CaloHLT.txt";
+    // 76X 2015 data
+    //std::string L2L3ResidualPath = "data/Fall15_25nsV2_DATA/Fall15_25nsV2_DATA_L2L3Residual_AK4PF.txt" ;
+    // 2016 data 
+    std::string L2L3ResidualPath = "data/Spring16_25nsV6_DATA/Spring16_25nsV6_DATA_L2L3Residual_AK4PF.txt";
     
     L1Par = new JetCorrectorParameters(L1Path);
     L2Par = new JetCorrectorParameters(L2Path);
@@ -62,7 +71,10 @@ analysisClass::analysisClass(string * inputList, string * cutFile, string * tree
     //unc = new JetCorrectionUncertainty("data/Summer15_50nsV5_DATA/Summer15_50nsV5_DATA_Uncertainty_AK4PFchs.txt");
     //unc = new JetCorrectionUncertainty("data/Summer15_25nsV5_DATA/Summer15_25nsV5_DATA_Uncertainty_AK4PFchs.txt");
     //unc = new JetCorrectionUncertainty("data/Summer15_25nsV6_DATA/Summer15_25nsV6_DATA_Uncertainty_AK4PFchs.txt");
-    unc = new JetCorrectionUncertainty("data/Summer15_25nsV7_DATA/Summer15_25nsV7_DATA_Uncertainty_AK4PFchs.txt");
+    // for 2015 CaloScouting
+    //unc = new JetCorrectionUncertainty("data/Summer15_25nsV7_DATA/Summer15_25nsV7_DATA_Uncertainty_AK4PFchs.txt");
+    // for 2016 CaloScouting
+    unc = new JetCorrectionUncertainty("data/Spring16_25nsV6_DATA/Spring16_25nsV6_DATA_Uncertainty_AK4PFchs.txt");
 
   }
   
@@ -139,8 +151,8 @@ void analysisClass::Loop()
    ////// If the root version is updated and rootNtupleClass regenerated,     /////
    ////// these lines may need to be updated.                                 /////    
    Long64_t nbytes = 0, nb = 0;
-   for (Long64_t jentry=0; jentry<nentries;jentry++) {
-   // for (Long64_t jentry=0; jentry<2000;jentry++) {
+     for (Long64_t jentry=0; jentry<nentries;jentry++) {
+      // for (Long64_t jentry=0; jentry<2000;jentry++) {
      Long64_t ientry = LoadTree(jentry);
      if (ientry < 0) break;
      nb = fChain->GetEntry(jentry);   nbytes += nb;
@@ -154,7 +166,9 @@ void analysisClass::Loop()
      size_t no_jets_ak4=jetPtAK4->size();
 
      vector<TLorentzVector> widejets;
+     vector<TLorentzVector> widejets_noCorr;
      TLorentzVector wj1, wj2, wdijet; 
+     TLorentzVector wj1_noCorr, wj2_noCorr, wdijet_noCorr; 
      TLorentzVector wj1_shift, wj2_shift, wdijet_shift; 
 
      vector<TLorentzVector> AK4jets;
@@ -447,11 +461,82 @@ void analysisClass::Loop()
 
 
      double MJJWide = 0; 
+     double MJJWideNoCorr = 0; 
      double DeltaEtaJJWide = 0;
      double DeltaPhiJJWide = 0;
      double MJJWide_shift = 0; 
+     float corr1 = 1.;
+     float corr2 = 1.;
      if( wj1.Pt()>0 && wj2.Pt()>0 )
      {
+       /*
+       // 2015 bias correction from Mikko/Federico
+       float p0 = - 0.63;
+       float p1 =   0.636;
+       float p2 = - 1.0;
+
+       float f1 = p0 + p1 * pow( 0.01 * wj1.Pt() , p2);
+       float f2 = p0 + p1 * pow( 0.01 * wj2.Pt() , p2);
+       
+       corr1 = 1. / (1. + 0.01*f1);
+       corr2 = 1. / (1. + 0.01*f2);
+       
+       wj1 = wj1*corr1;
+       wj2 = wj2*corr2;
+       
+       // old 2016 bias correction from Mikko/Federico
+       // (page 4 https://indico.cern.ch/event/546408/contributions/2217944/attachments/1298388/1936977/Giugno-24-2016_-_CaloScouting.pdf)
+       float p0 = 0.419;
+       float p1 = -5;
+       float p2 = -0.188;
+       float p3 = -0.5;
+       float p4 = 1.15;
+       float p5 = 399;
+       float p6 = 252;
+
+       float f1 = p0 + p1 * pow( wj1.Pt() , p2) + p3/wj1.Pt() + p4 * exp( -0.5 * ((wj1.Pt() - p5)/p6) * ((wj1.Pt() - p5)/p6) );
+       float f2 = p0 + p1 * pow( wj2.Pt() , p2) + p3/wj2.Pt() + p4 * exp( -0.5 * ((wj2.Pt() - p5)/p6) * ((wj2.Pt() - p5)/p6) );
+       
+       corr1 = 1. / (1. + 0.01*f1);
+       corr2 = 1. / (1. + 0.01*f2);
+       */
+       
+       // new 2016 bias correction from Federico
+       // (page 10 https://www.dropbox.com/s/7sporqeim01675d/Luglio_20_2016_CaloScouting.pdf?dl=1)
+       // flattened above 993.264 (point of zero slope)
+       float p0 = -31.7198;
+       float p1 = 8.58611;
+       float p2 = -0.622092;
+
+       float f1 = 0;
+       float f2 = 0;
+       if (wj1.Pt() >= 993.264)
+	 f1 = p0 + p1 * log( 993.264 ) + p2 * log( 993.264 ) * log( 993.264 ) ;
+       else
+	 f1 = p0 + p1 * log( wj1.Pt() ) + p2 * log( wj1.Pt() ) * log( wj1.Pt() ) ;
+       
+       if (wj2.Pt() >= 993.264)
+	 f2 = p0 + p1 * log( 993.264 ) + p2 * log( 993.264 ) * log( 993.264 ) ;
+       else	 
+	 f2 = p0 + p1 * log( wj2.Pt() ) + p2 * log( wj2.Pt() ) * log( wj2.Pt() ) ;
+       
+       corr1 = 1. / (1. + 0.01*f1);
+       corr2 = 1. / (1. + 0.01*f2);
+
+       // Get MJJ before corrections
+       wj1_noCorr = TLorentzVector(wj1);
+       wj2_noCorr = TLorentzVector(wj2);
+       wdijet_noCorr = wj1_noCorr + wj2_noCorr;
+       MJJWideNoCorr = wdijet_noCorr.M();
+       
+       // Put widejets in the container
+       widejets_noCorr.push_back( wj1_noCorr );
+       widejets_noCorr.push_back( wj2_noCorr );
+
+       // Apply corrections
+       wj1 = wj1*corr1;
+       wj2 = wj2*corr2;
+       
        // Create dijet system
        wdijet = wj1 + wj2;
        MJJWide = wdijet.M();
@@ -559,17 +644,21 @@ void analysisClass::Loop()
 
      if( widejets.size() >= 1 ){
          fillVariableWithValue( "pTWJ_j1", widejets[0].Pt() );
+         fillVariableWithValue( "pTWJ_j1_noCorr", widejets_noCorr[0].Pt() );
          fillVariableWithValue( "etaWJ_j1", widejets[0].Eta());
 	 //no cuts on these variables, just to store in output
          fillVariableWithValue( "massWJ_j1", widejets[0].M());
          fillVariableWithValue( "phiWJ_j1", widejets[0].Phi());
+         fillVariableWithValue( "corr1_WJ1", corr1);
        }
 
      if( widejets.size() >= 2 ){
          fillVariableWithValue( "pTWJ_j2", widejets[1].Pt() );
+         fillVariableWithValue( "pTWJ_j2_noCorr", widejets_noCorr[1].Pt() );
          fillVariableWithValue( "etaWJ_j2", widejets[1].Eta());
 	 fillVariableWithValue( "deltaETAjj", DeltaEtaJJWide ) ;
          fillVariableWithValue( "mjj", MJJWide ) ;
+         fillVariableWithValue( "mjj_noCorr", MJJWideNoCorr ) ;
          fillVariableWithValue( "mjj_shiftJEC", MJJWide_shift ) ;
 	 //no cuts on these variables, just to store in output
          fillVariableWithValue( "massWJ_j2", widejets[1].M());
@@ -577,6 +666,7 @@ void analysisClass::Loop()
 	 //dijet
          fillVariableWithValue( "CosThetaStarWJ", TMath::TanH( (widejets[0].Eta()-widejets[1].Eta())/2 )); 
 	 fillVariableWithValue( "deltaPHIjj", DeltaPhiJJWide ) ;
+         fillVariableWithValue( "corr2_WJ2", corr2);
 	 //fillVariableWithValue( "Dijet_MassAK8", mjjAK8 ) ;  
 	 //fillVariableWithValue( "Dijet_MassC", mjjCA8 ) ;
 	 // if(wdijet.M()<1){
@@ -597,12 +687,12 @@ void analysisClass::Loop()
      if (isData)
        {
 	 fillVariableWithValue("passHLT_CaloJet40_CaloScouting_PFScouting",triggerResult->at(0));// CaloJet40_CaloScouting_PFScouting
-	 fillVariableWithValue("passHLT_L1HTT_CaloScouting_PFScouting",triggerResult->at(1));// L1HTT_CaloScouting_PFScouting
-	 fillVariableWithValue("passHLT_CaloScoutingHT250",triggerResult->at(2));// CaloScoutingHT250
+	 fillVariableWithValue("passHLT_L1HTT_CaloScouting_PFScouting",triggerResult->at(2));// L1HTT_CaloScouting_PFScouting
+	 fillVariableWithValue("passHLT_CaloScoutingHT250",triggerResult->at(4));// CaloScoutingHT250
 
-	 fillVariableWithValue("passL1T_HTT125",l1Result->at(0));// 
-	 fillVariableWithValue("passL1T_HTT150",l1Result->at(1));// 
-	 fillVariableWithValue("passL1T_HTT175",l1Result->at(2));// 
+	 fillVariableWithValue("passL1T_HTT120",l1Result->at(0));// 
+	 fillVariableWithValue("passL1T_HTT170",l1Result->at(1));// 
+	 fillVariableWithValue("passL1T_HTT200",l1Result->at(2));// 
 	 // fillVariableWithValue("passL1T_ZeroBias",l1Result->at(3));// 
 	 // fillVariableWithValue("passL1T_DoubleMu_10_3p5",l1Result->at(4));// 
 	 // fillVariableWithValue("passL1T_DoubleMu_12_5",l1Result->at(5));// 

@@ -4,6 +4,7 @@ import os
 import sys
 import optparse
 import datetime
+import time
 
 usage = "usage: To be run from DijetRootTreeAnalyzer/ :  python scripts/submit_batch_EOS_split.py -q 8nh -i test/santanas/list/list_ScoutingPF__17_01_2016/ -o /eos/cms/store/group/phys_exotica/dijet/Dijet13TeVScouting/rootTrees_reduced/TEST/ --split 2 -m ScoutingPFHT --tag ScoutingPF__17_01_2016 -c config/cutFile_mainDijetScoutingSelection.txt"
 
@@ -21,6 +22,10 @@ parser.add_option("-i", "--input", dest="input",
 parser.add_option("-o", "--output", dest="output",
     help="the directory OUTDIR contains the output of the program",
     metavar="OUTDIR")
+
+parser.add_option("--timestamp", dest="timestamp",
+    help="rerun failed jobs for specific timestamp",
+    default="")
 
 parser.add_option("-m", "--match", dest="match",
     help="run only the samples containing this string in the name",
@@ -54,7 +59,11 @@ timeMarker = "mycutFile_%04d%02d%02d_%02d%02d%02d__" % (current_time.year,curren
 cutfileName = timeMarker+os.path.split(opt.cutfile)[1]
 print cutfileName
 
-newTag = opt.tag+simpletimeMarker
+if not opt.timestamp:
+  newTag = opt.tag+simpletimeMarker
+else:
+  newTag = opt.tag+"_"+opt.timestamp
+
 ###
 os.system("/afs/cern.ch/project/eos/installation/0.3.84-aquamarine/bin/eos.select mkdir -p "+opt.output+"/"+newTag)
 #os.system("rm -rf batch")
@@ -148,43 +157,53 @@ for line in  ins:
     logfile = "batch/"+newTag+"/logfile_"+sample+"_"+newTag+"_"+str(jj)+".log"#NEW
     crablogfile = "batch/"+newTag+"/crablogfile_"+sample+"_"+newTag+"_"+str(jj)+".crablog"#NEW
 
+    ntupleDone = opt.output[1:]+"/"+newTag+"/rootfile_"+sample+"_"+newTag+"_"+str(jj)+"_reduced_skim.root"
+
+    if os.path.isfile(ntupleDone)==True:
+      print "This job has already been run, output is here: "+ntupleDone+"\n"
+      continue
+
     ###################################
     #command = "./main "+splittedlist[jj]+" config/cutFile_mainDijetSelection.txt dijets/events "+opt.output+simpletimeMarker+"/rootfile_"+sample+"_"+newTag+"_"+str(jj)+" "+opt.output+simpletimeMarker+"/cutEfficiencyFile_"+sample+"_"+newTag+"_"+str(jj)
-    #command = "./main "+splittedlist[jj]+" config/cutFile_mainDijetSelection.txt dijets/events /tmp/rootfile_"+sample+"_"+newTag+"_"+str(jj)+" /tmp/cutEfficiencyFile_"+sample+"_"+newTag+"_"+str(jj)
-    #command = "./main "+splittedlist[jj]+" batch/"+cutfileName+" dijets/events /tmp/rootfile_"+sample+"_"+newTag+"_"+str(jj)+" /tmp/cutEfficiencyFile_"+sample+"_"+newTag+"_"+str(jj)
-    #command = "./main "+splittedlist[jj]+" batch/"+cutfileName+" dijetscouting/events /tmp/rootfile_"+sample+"_"+newTag+"_"+str(jj)+" /tmp/cutEfficiencyFile_"+sample+"_"+newTag+"_"+str(jj)+" >& "+"/tmp/logfile_"+sample+"_"+newTag+"_"+str(jj)+".log"#NEW
-    command = "./main "+splittedlist[jj]+" batch/"+cutfileName+" dijetscouting/events /tmp/rootfile_"+sample+"_"+newTag+"_"+str(jj)+" /tmp/cutEfficiencyFile_"+sample+"_"+newTag+"_"+str(jj)+" >& "+pwd+"/"+logfile #NEW
+    #command = "./main "+splittedlist[jj]+" config/cutFile_mainDijetSelection.txt dijets/events $TWD/rootfile_"+sample+"_"+newTag+"_"+str(jj)+" $TWD/cutEfficiencyFile_"+sample+"_"+newTag+"_"+str(jj)
+    #command = "./main "+splittedlist[jj]+" batch/"+cutfileName+" dijets/events $TWD/rootfile_"+sample+"_"+newTag+"_"+str(jj)+" $TWD/cutEfficiencyFile_"+sample+"_"+newTag+"_"+str(jj)
+    #command = "./main "+splittedlist[jj]+" batch/"+cutfileName+" dijetscouting/events $TWD/rootfile_"+sample+"_"+newTag+"_"+str(jj)+" $TWD/cutEfficiencyFile_"+sample+"_"+newTag+"_"+str(jj)+" >& "+"$TWD/logfile_"+sample+"_"+newTag+"_"+str(jj)+".log"#NEW
+    command = "./main "+splittedlist[jj]+" batch/"+cutfileName+" dijetscouting/events $TWD/rootfile_"+sample+"_"+newTag+"_"+str(jj)+" $TWD/cutEfficiencyFile_"+sample+"_"+newTag+"_"+str(jj)+" >& "+pwd+"/"+logfile #NEW
     ###################################
 
     #print "submit "+command
     outputname = "batch/"+newTag+"/submit_"+sample+"_"+newTag+"_"+str(jj)+".src"
     outputfile = open(outputname,'w')
-    outputfile.write('#!/bin/bash\n')
-    #outputfile.write('export SCRAM_ARCH=slc6_amd64_gcc481\n')
+    #outputfile.write('#!/bin/bash\n')
+    outputfile.write('#!/usr/bin/env bash -x\n')
     outputfile.write('export SCRAM_ARCH=slc6_amd64_gcc491\n')
+    outputfile.write('pwd\n')
+    outputfile.write('export TWD=$PWD\n')
     outputfile.write('cd '+pwd+' \n')
+    outputfile.write('pwd\n')
     outputfile.write('eval `scramv1 runtime -sh`\n')
     outputfile.write(command+"\n")
-    outputfile.write("ls -lrth /tmp/\n")
-    #outputfile.write("ls /tmp/ | grep "+newTag+"\n")
-    outputfile.write("xrdcp -f /tmp/rootfile_"+sample+"_"+newTag+"_"+str(jj)+"_reduced_skim.root root://eoscms/"+opt.output+"/"+newTag+"/rootfile_"+sample+"_"+newTag+"_"+str(jj)+"_reduced_skim.root\n")##NEW
-    outputfile.write("xrdcp -f /tmp/rootfile_"+sample+"_"+newTag+"_"+str(jj)+".root root://eoscms/"+opt.output+"/"+newTag+"/rootfile_"+sample+"_"+newTag+"_"+str(jj)+".root\n")##NEW
-    outputfile.write("xrdcp -f /tmp/cutEfficiencyFile_"+sample+"_"+newTag+"_"+str(jj)+".dat root://eoscms/"+opt.output+"/"+newTag+"/cutEfficiencyFile_"+sample+"_"+newTag+"_"+str(jj)+".dat\n")##NEW
-    #outputfile.write("xrdcp -f /tmp/logfile_"+sample+"_"+newTag+"_"+str(jj)+".log "+pwd+"/"+logfile+"\n")##NEW
-    outputfile.write("rm /tmp/rootfile_"+sample+"_"+newTag+"_"+str(jj)+"_reduced_skim.root\n")
-    outputfile.write("rm /tmp/rootfile_"+sample+"_"+newTag+"_"+str(jj)+".root\n")
-    outputfile.write("rm /tmp/cutEfficiencyFile_"+sample+"_"+newTag+"_"+str(jj)+".dat\n")
-    #outputfile.write("rm /tmp/logfile_"+sample+"_"+newTag+"_"+str(jj)+".log\n")
-    outputfile.write("ls -lrth /tmp/\n")
+    outputfile.write("ls -lrth $TWD/\n")
+    #outputfile.write("ls $TWD/ | grep "+newTag+"\n")
+    outputfile.write("xrdcp -f $TWD/rootfile_"+sample+"_"+newTag+"_"+str(jj)+"_reduced_skim.root root://eoscms/"+opt.output+"/"+newTag+"/rootfile_"+sample+"_"+newTag+"_"+str(jj)+"_reduced_skim.root\n")##NEW
+    outputfile.write("xrdcp -f $TWD/rootfile_"+sample+"_"+newTag+"_"+str(jj)+".root root://eoscms/"+opt.output+"/"+newTag+"/rootfile_"+sample+"_"+newTag+"_"+str(jj)+".root\n")##NEW
+    outputfile.write("xrdcp -f $TWD/cutEfficiencyFile_"+sample+"_"+newTag+"_"+str(jj)+".dat root://eoscms/"+opt.output+"/"+newTag+"/cutEfficiencyFile_"+sample+"_"+newTag+"_"+str(jj)+".dat\n")##NEW
+    #outputfile.write("xrdcp -f $TWD/logfile_"+sample+"_"+newTag+"_"+str(jj)+".log "+pwd+"/"+logfile+"\n")##NEW
+    outputfile.write("rm $TWD/rootfile_"+sample+"_"+newTag+"_"+str(jj)+"_reduced_skim.root\n")
+    outputfile.write("rm $TWD/rootfile_"+sample+"_"+newTag+"_"+str(jj)+".root\n")
+    outputfile.write("rm $TWD/cutEfficiencyFile_"+sample+"_"+newTag+"_"+str(jj)+".dat\n")
+    #outputfile.write("rm $TWD/logfile_"+sample+"_"+newTag+"_"+str(jj)+".log\n")
+    outputfile.write("ls -lrth $TWD/\n")
     outputfile.close()  
     os.system("chmod 755 "+outputname)
 
     #print outputname 
     if opt.interactive==False:
-      #bsubCommand = "bsub -q "+opt.queue+" -o "+pwd+"/"+crablogfile+" source "+pwd+"/"+outputname
-      bsubCommand = "bsub -q "+opt.queue+" -o "+pwd+"/"+crablogfile+" < "+pwd+"/"+outputname
+      bsubCommand = "bsub -q "+opt.queue+" -o "+pwd+"/"+crablogfile+" source "+pwd+"/"+outputname
+      #bsubCommand = "bsub -q "+opt.queue+" -o "+pwd+"/"+crablogfile+" < "+pwd+"/"+outputname
       print bsubCommand ##NEW
-      submitCommandsFile.write(bsubCommand+"\n")
+      submitCommandsFile.write(bsubCommand+"\n")      
+      #time.sleep(3)
       os.system(bsubCommand)##NEW
     else:
       print logfile
